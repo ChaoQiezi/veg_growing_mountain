@@ -1,5 +1,5 @@
 # 忽略 JetBrains (PyCharm) 的配置文件
-.idea/
+/.idea
 
 # 忽略 Python 自动生成的文件
 __pycache__/
@@ -22,3 +22,4 @@ build/
 
 # 忽略环境变量文件 (通常用于存放敏感信息)
 .env
+.idea/vcs.xml

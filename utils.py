@@ -14,6 +14,8 @@ from osgeo import gdal, osr
 import rasterio as rio
 import json
 import calendar
+from datetime import date
+from dateutil.relativedelta import relativedelta
 import os
 import time
 from subprocess import call
@@ -611,3 +613,39 @@ def write_png(arr: np.ndarray, out_path):
     """
 
     plt.imsave(out_path, arr)
+
+
+def parse_paths_monthly(paths, ndvi_name, start_date, end_date):
+    """
+    按月份解析路径(同一月份的路径放在同一个[])
+    :param paths:
+    :return:
+    """
+
+    # re匹配模式
+    pattern = r'_(\d{4})_(\d{2})(\d{2})'
+    # 总月份数
+    delta = relativedelta(end_date, start_date)
+    total_months = delta.years * 12 + delta.months + 1
+    # 存储monthly-路径的容器
+    monthly_paths = {}
+    for month_count in range(total_months):
+        cur_date = start_date + relativedelta(months=month_count)
+        monthly_paths[cur_date.strftime('%Y_%m')] = []
+
+    # 循环每一个路径, 将其添加到对应key(date)的value(列表)容器中
+    for cur_path in paths:
+        # 获取当前循环下的日期
+        cur_match = re.search(pattern, cur_path)
+        cur_year, cur_month, cur_day = map(int, [cur_match.group(1), cur_match.group(2), cur_match.group(3)])
+        cur_date = date(cur_year, cur_month, cur_day)
+        cur_date_ym = cur_date.strftime('%Y_%m')
+
+        # 添加路径至容器
+        if cur_date_ym in monthly_paths.keys():
+            monthly_paths[cur_date.strftime('%Y_%m')].append(cur_path)
+        else:
+            print('当前日期未添加至容器: {}'.format(cur_date.strftime('%Y_%m%d')))
+            continue
+
+    return monthly_paths

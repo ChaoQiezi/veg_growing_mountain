@@ -5,7 +5,7 @@
 # @FileName: gimms_3g_process
 
 """
-This script is used to 预处理NOAA CDR AVHRR NDVI V5数据集
+This script is used to 预处理GIMMS NDVI 3G+数据集
 
 包括: nc转tiff
 

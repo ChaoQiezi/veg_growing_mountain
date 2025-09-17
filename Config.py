@@ -18,6 +18,16 @@ Resources_dir = os.path.join(root_dir, 'Resources')
 # IDM路径
 idm_path = r"D:\Softwares\IDM\Internet Download Manager\IDMan.exe"
 
+# 各个NDVI产品数据集名称
+ndvi_names = {
+    'clms': 'CLMS_NDVI_V3',
+    'gimms': 'GIMMS_NDVI_3G+',
+    'mod': 'MOD13A3',
+    'myd': 'MYD13A3',
+    'noaa': 'NOAA_AVHRR_NDVI_V5',
+    'pku_gimms': 'PKU_GIMMS_NDVI_V1.2'
+}
+
 # api和key
 my_url = "https://cds.climate.copernicus.eu/api"  # api链接
 my_key = "c70a112c-b210-492d-a7a0-29a7c5356820"  # API密钥(Mine)

@@ -126,5 +126,6 @@ for cur_month_count in pbar:
 
     # break
 
-rmtree(temp_dir)  # 删除临时文件夹及其内所有文件
+rmtree(temp_dir, ignore_errors=True)  # 删除临时文件夹及其内所有文件, ignore_errors=True是为了避免同时运行多个类似程序导致重复删除目录报错
+pbar.set_postfix_str('处理完成.')
 print('{}-处理完成.'.format(dataset_name))

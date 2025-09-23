@@ -57,3 +57,4 @@ for cur_ndvi_name in ndvi_names.values():
 
 print('年际均值计算完成.')
 
+

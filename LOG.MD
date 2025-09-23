@@ -115,7 +115,7 @@ for cur_山区 in 所有山区:
 
 # 2025/9/4 异常情况
 
-1. [mod13a3_process.py](Src/preprocessing/mod13a3_process.py)中`img_warp`函数输出的geotiff文件存在似乎是未进行投影转换的
+1. [mod13a3_process.py](Src/Preprocessing/mod13a3_process.py)中`img_warp`函数输出的geotiff文件存在似乎是未进行投影转换的
    小方块(夹杂在大栅格矩阵中)
 
    ![异常方块](Assets/异常Block.png)
@@ -145,7 +145,7 @@ for cur_山区 in 所有山区:
 
 # 2025/9/9 数据类型不一致导致的精度问题
 
-1. [gimms_3g_process.py](Src/preprocessing/gimms_3g_process.py)中, 我尝试将数组转换为float32, 因为精度
+1. [gimms_3g_process.py](Src/Preprocessing/gimms_3g_process.py)中, 我尝试将数组转换为float32, 因为精度
    太高(float64)没有必要, 但是由于valid_range(-0.3 ~ 1)的数据类型还是float64, 因此导致了在-0.3处出现了问题.
    具体问题是数组中存在相当一部分np.float32(-0.3),将其与np.float64(-0.3)比较时发现：
    `npfloat32(-0.3) < np.float64(-0.3)`是True,这就导致数组中一部分-0.3被掩膜掉了.

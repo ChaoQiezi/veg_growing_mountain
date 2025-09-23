@@ -15,13 +15,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.use('TkAgg')
 
-# 准备
-in_path = r"I:\DataHub\NDVI\GIMMS_NDVI_3G+\ndvi3g_geo_v1_1_2000_0106.nc4"
-
-# 读取原始的栅格矩阵
-# with nc.Dataset(in_path, 'r') as f:
-#     f.variables['ndvi'][:]
-cur_var = xr.open_dataset(in_path, engine='netcdf4', mask_and_scale=True)
-ndvi = cur_var['ndvi']
-plt.imshow(ndvi[0, :, :])
-plt.show()
+args_list = [[1, 11, 111], [2, 22, 222]]
+for args in zip(args_list):
+    print(args)

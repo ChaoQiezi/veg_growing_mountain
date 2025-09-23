@@ -197,5 +197,21 @@ for cur_山区 in 所有山区:
 
          现在年尺度 --> 年际尺度毫无疑问就是mean聚合(xie已经明确), 但是月尺度 --> 年尺度以及原始分辨率(例每天) --> 月尺度这些聚合方式
          是什么。建议查看北师大-陈晋，朱孝林(陈的学生)，电子科大-曹尹(陈的学生)
+         web science检索: "MODIS" "NDVI" year*
    - 5°slope这个先加上, 但是后面yin不一定对, 多以留一个后门
    - 3 - 5个区域， 安第斯山脉, 青藏高原, 横断山脉
+
+
+# 2025/9/18 注意事项
+
+1. 部分文献(例如: Assessment of MODIS sun-sensor geometry variations effect on observed NDVI using MSG SEVIRI geostationary data)
+   说明了AVHRR NDVI没有经过大气校正, 因此需要查看一下关于本项目中关于NOAA_AVHRR_NDVI_V5是否进行了相关校正算法？
+2. 部分文献(例如: Evaluation of Earth Observation based global long term vegetation trends — Comparing GIMMS and MODIS global NDVI time series)
+   说明了MOD13(Terra卫星)产品2000年1月和2月数据处于调试阶段(不确定性大), 因此将后续多年的1月和2月进行均值计算替换这两个月
+   的数据集, 这里我们也需要考虑是否替换, 但是我们的时间是从2003年开始的, 因此对于Terra卫星的MOD13不需要管, 但是对于Aqua
+   卫生的MYD13产品却需要注意它是否也处于调试阶段需要进行类似的处理呢？
+
+
+# 2025/9/19 注意事项
+
+1. 对于所有预处理好的NDVI产品, 他们的NDVI值范围是否需要进行约束呢? --> 论文有<1的值赋值为0, 也有<0.1的赋值为0.1

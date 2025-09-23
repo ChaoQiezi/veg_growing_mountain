@@ -26,9 +26,11 @@ from typing import Union
 from pyhdf.SD import SD
 from PIL import Image
 from matplotlib import pyplot as plt
+from glob import glob
 
 import Config
 from Config import idm_path
+from my_utils import img_agg
 
 gdal.DontUseExceptions()
 
@@ -615,11 +617,13 @@ def write_png(arr: np.ndarray, out_path):
     plt.imsave(out_path, arr)
 
 
-def parse_paths_monthly(paths, ndvi_name, start_date, end_date):
+def parse_paths_monthly(paths, start_date, end_date):
     """
-    按月份解析路径(同一月份的路径放在同一个[])
-    :param paths:
-    :return:
+    按月份解析路径(同一月份的路径放在同一个[]), 即同时间段的路径分为一组, 以字典形式返回不同时间段的组/group
+    :param paths: 所有需要分组的路径
+    :param start_date: 起始时间(datetime等类型)
+    :param end_date: 终止时间(datetime等类型)
+    :return: 返回字典, {'datetime': [path1,path2], ····}
     """
 
     # re匹配模式
@@ -641,6 +645,10 @@ def parse_paths_monthly(paths, ndvi_name, start_date, end_date):
         cur_date = date(cur_year, cur_month, cur_day)
         cur_date_ym = cur_date.strftime('%Y_%m')
 
+        # 判断当前路径的时间点是否在start_date和end_date范围内
+        if not (start_date <= cur_date <= end_date):  # 不在则跳过该路径
+            continue
+
         # 添加路径至容器
         if cur_date_ym in monthly_paths.keys():
             monthly_paths[cur_date.strftime('%Y_%m')].append(cur_path)
@@ -649,3 +657,138 @@ def parse_paths_monthly(paths, ndvi_name, start_date, end_date):
             continue
 
     return monthly_paths
+
+
+def aggregate_to_temporal(product_name, in_dir, out_dir, start_date, end_date, time_scale, agg_mode='max'):
+    """
+    对指定数据集产品进行批量月尺度聚合(默认使用Maximum Value Composite, MVC)
+    :param product_name:
+    :param in_dir:
+    :param out_dir:
+    :param start_date:
+    :param end_date:
+    :param agg_mode:
+    :return:
+    """
+
+    # 检查输出路径是否存在(不存在创建)
+    os.makedirs(out_dir, exist_ok=True)
+
+    # 检索文件,获取路径
+    product_wildcard = '{}_*.tif'.format(product_name)  # 检索的通配符
+    product_wildcard = os.path.join(in_dir, product_wildcard)
+    product_retrival_paths = glob(product_wildcard)
+    # 解析路径
+    temporal_paths = []
+    if time_scale == 'monthly':
+        temporal_paths = parse_paths_monthly(product_retrival_paths, start_date, end_date)  # 解析路径
+    elif time_scale == 'yearly':
+        temporal_paths = parse_paths_yearly(product_retrival_paths, start_date, end_date)
+
+    # 迭代聚合为time_scale尺度
+    pbar = tqdm(temporal_paths.items(), ncols=100, colour='blue')
+    for cur_date_str, cur_paths in pbar:
+        # 输出准备
+        cur_out_filename = '{}_{}.tif'.format(product_name, cur_date_str)
+        cur_out_path = os.path.join(out_dir, cur_out_filename)
+        if os.path.exists(cur_out_path):  # 如果存在该文件则跳过
+            pbar.refresh()
+            continue
+
+        # 时间尺度聚合
+        pbar.set_postfix_str('聚合: {}'.format(cur_out_filename))  # 更新进度条
+        agg_arr, arr_meta = img_agg(cur_paths, agg_mode=agg_mode)
+        # 输出
+        pbar.set_postfix_str('输出: {}'.format(cur_out_filename))
+        try:
+            with rio.open(cur_out_path, 'w', **arr_meta) as dst:
+                dst.write(agg_arr, 1)
+        except (Exception, KeyboardInterrupt) as e:  # 无论发生什么意外, 首先检索是否已经生成了结果文件, 将其删除(因为其可能是损坏的)
+            if os.path.exists(cur_out_path):
+                os.remove(cur_out_path)
+            pbar.write(
+                '\n{}: 发生异常终止当前日期的处理并退出程序(errr: {})'.format(cur_date_str, e))
+            exit(1)  # 退出程序
+
+
+def parse_paths_yearly(paths, start_date, end_date):
+    # re匹配模式
+    pattern = r'_(\d{4})_(\d{2}).*.tif'
+    # 总年份数
+    delta = relativedelta(end_date, start_date)
+    total_years = delta.years + 1
+    # 存储yearly-路径的容器
+    yearly_paths = {}
+    for year_count in range(total_years):
+        cur_date = start_date + relativedelta(years=year_count)
+        yearly_paths[cur_date.strftime('%Y')] = []
+
+    # 循环每一个路径, 将其添加到对应key(date)的value(列表)容器中
+    for cur_path in paths:
+        # 获取当前循环下的日期
+        cur_match = re.search(pattern, cur_path)
+        cur_year, cur_month = map(int, [cur_match.group(1), cur_match.group(2)])
+        cur_date = date(cur_year, cur_month, 1)
+        cur_date_year = cur_date.strftime('%Y')
+
+        # 判断当前路径的时间点是否在start_date和end_date范围内
+        if not (start_date <= cur_date <= end_date):  # 不在则跳过该路径
+            continue
+
+        # 添加路径至容器
+        if cur_date_year in yearly_paths.keys():
+            yearly_paths[cur_date.strftime('%Y')].append(cur_path)
+        else:
+            print('当前日期未添加至容器: {}'.format(cur_date.strftime('%Y_%m%d')))
+            continue
+
+    return yearly_paths
+
+
+def mul_resample(product_name, in_dir, out_dir, out_res, out_bound=None, algin_pixel=False):
+    """
+    批量重采样
+    :param product_name:
+    :param in_dir:
+    :param out_dir:
+    :param start_date:
+    :param end_date:
+    :return:
+    """
+
+    # 检查输出路径是否存在(不存在创建)
+    os.makedirs(out_dir, exist_ok=True)
+
+    # 检索文件,获取路径
+    product_wildcard = '{}_*.tif'.format(product_name)  # 检索的通配符
+    product_wildcard = os.path.join(in_dir, product_wildcard)
+    product_retrival_paths = glob(product_wildcard)
+
+    # 迭代重采样Geotiff文件
+    pbar = tqdm(product_retrival_paths, ncols=120, colour='blue')
+    for cur_path in pbar:
+        # 输出设置
+        cur_out_filename = os.path.basename(cur_path)
+        cur_out_path = os.path.join(out_dir, cur_out_filename)
+        if os.path.exists(cur_out_path):  # 存在则跳过
+            continue
+
+        # 重采样
+        pbar.set_postfix_str('重采样: {}'.format(cur_out_filename))
+        try:
+            warp_options = gdal.WarpOptions(
+                outputBounds=out_bound,
+                xRes=out_res,
+                yRes=out_res,
+                targetAlignedPixels=algin_pixel,
+                resampleAlg=gdal.GRA_Bilinear,
+                multithread=True
+            )
+            gdal.Warp(cur_out_path, cur_path, options=warp_options)
+        except (Exception, KeyboardInterrupt) as e:
+            if os.path.exists(cur_out_path):
+                os.remove(cur_out_path)
+                continue
+            pbar.write('异常退出(error: {})'.format(e))
+            exit(1)
+

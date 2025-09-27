@@ -27,6 +27,7 @@ from pyhdf.SD import SD
 from PIL import Image
 from matplotlib import pyplot as plt
 from glob import glob
+import seaborn as sns
 
 import Config
 from Config import idm_path
@@ -792,3 +793,37 @@ def mul_resample(product_name, in_dir, out_dir, out_res, out_bound=None, algin_p
             pbar.write('异常退出(error: {})'.format(e))
             exit(1)
 
+
+def scatter_plot(df, x, y, hue, out_path, title=None, xlabel=None, ylabel=None):
+    fig, ax = plt.subplots(figsize=(12, 8))
+    scatter_plot = sns.scatterplot(df,
+                                   x=x, y=y,
+                                   hue=hue, palette={True: 'darkgreen', False: 'blue'},
+                                   alpha=0.5,
+                                   s=150,
+                                   edgecolor='none',
+                                   # color='darkgreen',
+                                   ax=ax,
+                                   legend=False)
+    # XY轴和图标题设置
+    ax.set_title(title, size=20)
+    ax.set_xlabel(xlabel, size=20, labelpad=15)
+    ax.set_ylabel(ylabel, size=20, labelpad=15)
+    # 轴刻度设置
+    # x_locator = mticker.MultipleLocator(100)  # DEM刻度间隔为100
+    # y_locator = mticker.MultipleLocator(0.05)  # NDVI刻度间隔为0.05
+    # ax.xaxis.set_major_locator(x_locator)
+    # ax.yaxis.set_major_locator(y_locator)
+    ax.tick_params(axis='both', which='major', size=10, labelsize=20, pad=-5)
+    # 网格线设置
+    ax.grid(axis='both', linestyle='dashdot', linewidth=0.5, alpha=0.7)
+    sns.despine(ax=ax, top=True, right=True)  # 去除图框上和右侧的线
+    fig.tight_layout()
+
+    # 输出
+    try:
+        plt.savefig(out_path)
+        plt.close()
+    except:
+        if os.path.exists(out_path):
+            os.remove(out_path)

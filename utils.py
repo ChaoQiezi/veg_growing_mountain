@@ -28,12 +28,15 @@ from PIL import Image
 from matplotlib import pyplot as plt
 from glob import glob
 import seaborn as sns
+from scipy import stats
 
 import Config
 from Config import idm_path
 from my_utils import img_agg
 
 gdal.DontUseExceptions()
+
+
 
 def generate_request(var_name, datetime, request=Config.request):
     """
@@ -794,17 +797,44 @@ def mul_resample(product_name, in_dir, out_dir, out_res, out_bound=None, algin_p
             exit(1)
 
 
-def scatter_plot(df, x, y, hue, out_path, title=None, xlabel=None, ylabel=None):
-    fig, ax = plt.subplots(figsize=(12, 8))
+def scatter_plot(df, x, y, hue, out_path, title=None, xlabel=None, ylabel=None, text=None):
+    """
+    基于pd.Dataframe数据集绘制散点图
+    :param df: 数据集
+    :param x: x轴数据的列名称
+    :param y: y轴数据的列名称
+    :param hue: 分组的列名称
+    :param out_path: 散点图的输出路径
+    :param title: 图标题
+    :param xlabel: x轴列标题
+    :param ylabel: y轴列标题
+    :return: None
+    """
+
+    # 画布和轴初始化
+    fig, ax = plt.subplots(figsize=(14, 11))
+
+    # 散点图绘制
     scatter_plot = sns.scatterplot(df,
                                    x=x, y=y,
                                    hue=hue, palette={True: 'darkgreen', False: 'blue'},
-                                   alpha=0.5,
-                                   s=150,
-                                   edgecolor='none',
-                                   # color='darkgreen',
-                                   ax=ax,
-                                   legend=False)
+                                   alpha=0.5,  # 散点的透明度
+                                   s=150,  # 散点的size大小
+                                   edgecolor='none',  # 散点分为边缘的圈圈线和里面的填充色, 这里边缘线的颜色设置为无, 即无色
+                                   # color='darkgreen',  # 散点的颜色, 由于分组所以该参数不需要设置背palette替代
+                                   ax=ax,  # 散点图绘制在ax上
+                                   legend=False)  # 不需要绘制相关图例
+    # 回归图绘制(仅绘制线性拟合的趋势线)
+    sns.regplot(
+        data=df,
+        x=x, y=y,
+        color='gray',  # 回归线的颜色
+        scatter=False,  # 不再重复绘制散点
+        ci=95,  # 显示95%置信区间，设为None则不显示
+        ax=ax,
+        # label=f'Fit: {group_name}'  # 为拟合线添加标签
+    )
+
     # XY轴和图标题设置
     ax.set_title(title, size=20)
     ax.set_xlabel(xlabel, size=20, labelpad=15)
@@ -820,9 +850,19 @@ def scatter_plot(df, x, y, hue, out_path, title=None, xlabel=None, ylabel=None):
     sns.despine(ax=ax, top=True, right=True)  # 去除图框上和右侧的线
     fig.tight_layout()
 
+    # 为图底部添加一定的空间用于描述数据统计分析部分
+    if text is not None:
+        fig.subplots_adjust(bottom=0.25)
+        # 添加文本信息
+        fig.text(
+            x=0.0, y=0.01,
+            s=text,
+            fontsize=16
+        )
+
     # 输出
     try:
-        plt.savefig(out_path)
+        plt.savefig(out_path, dpi=600)
         plt.close()
     except:
         if os.path.exists(out_path):
